@@ -1,0 +1,331 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.19.11"
+  },
+  "cells": [
+    {
+      "id": "emfo",
+      "code_hash": "a53153ff3779475f23f75a77766efd22",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"section-2-from-grid-to-token-the-bridge\">Section 2 \u2014 From Grid to Token: The Bridge</h2>\n<span class=\"paragraph\">The NCA grid looks nothing like language. A 16x16 grid of coloured\nsquares, evolving step by step under a hidden rule.</span>\n<span class=\"paragraph\">But to train a transformer on it, we need <strong>tokens</strong> \u2014 integers from\na fixed vocabulary. This section walks through the tokenisation pipeline\nand reveals the surprise: NCA token frequencies follow the same\npower-law distribution as natural language.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TqIu",
+      "code_hash": "4cf75b8e968fc0517d17582f352f04d1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"section-3-the-finding-what-did-nca-pre-training-actually-install\">Section 3 - The Finding: What Did NCA Pre-Training Actually Install?</h2>\n<span class=\"paragraph\">We train two tiny transformers:</span>\n<ul>\n<li><strong>Scratch:</strong> random initialisation, no pre-training</li>\n<li><strong>NCA:</strong> pre-trained on NCA sequences, then switched to bracket task</li>\n</ul>\n<span class=\"paragraph\">Before either model sees a single bracket, we ask:\n<em>where does each model attend when shown a bracket sequence?</em></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "AjVT",
+      "code_hash": "81d6a28320ae0c1c12adb03814d6a9d1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"section-4-the-problem-catastrophic-forgetting\">Section 4 - The Problem: Catastrophic Forgetting</h2>\n<span class=\"paragraph\">Standard fine-tuning <strong>destroys</strong> the pre-trained circuits.\nThis is <strong>catastrophic forgetting</strong> visible at the circuit level\nfor the first time in NCA pre-training research.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "yCnT",
+      "code_hash": "43882294de22a94a798f4b89da21c65b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"section-5-the-fix-protecting-pre-trained-circuits\">Section 5 - The Fix: Protecting Pre-trained Circuits</h2>\n<span class=\"paragraph\">Two strategies, both validated across 3 seeds:</span>\n<ul>\n<li><strong>Slow LR</strong> - 10x lower learning rate on transferred layers</li>\n<li><strong>Frozen attention</strong> - freeze attention weights, only train MLPs</li>\n</ul>\n<span class=\"paragraph\">Both preserve &gt;90% of the Layer 1 structure through 80 epochs.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lgWD",
+      "code_hash": "7c3b18d3b910784ef1ba740c08169c1d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"section-6-where-this-leads-petri-dish-nca\">Section 6 - Where This Leads: Petri Dish NCA</h2>\n<span class=\"paragraph\">What if the NCA itself never stopped learning?</span>\n<span class=\"paragraph\"><strong>Petri Dish Neural Cellular Automata</strong> (Sakana AI, ALIFE 2025):\nmultiple NCA agents compete for territory on a shared grid,\neach continuously updating their own parameters via backpropagation\nduring the simulation itself.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hbol",
+      "code_hash": "d545e6b7e5687d61c56a82587dfc906a",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "f6fb6e0846e94ff7751c06a4570abd32",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "2f10db547dbf6fc928d22f75225a5cce",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "fb199cf72d3c66abba67501461099957",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "12c32b40bc4b0c99aba70df8c7919de4",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "998fa0868cf715b6acebbaf936ea4698",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "007ec94a75a8df0b0c6a7e85f24600eb",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "2d4f5c54675a194d650e65b9d197424f",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "90196b6ac398134f8507e61b8c0ac27e",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "45fac3ee49a1ddd171ea1e92aa5ba3a5",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "fcaea101c57e0f1937981b89d789416b",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "e7e0f61e8e4e3e90c400148563675b69",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "ecfd246f958420eae7ce22dd67e4e9c9",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "iLit",
+      "code_hash": "d7702d6b24b7fbb08278dfcd2b045932",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "e1dc13a9aeea2c273e03cc2dae3613bd",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ROlb",
+      "code_hash": "77f2981038ab5bfffe5fa1ea48780b38",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "db8b1146c17f10910d44e0221bd2e34d",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Vxnm",
+      "code_hash": "47a00b66079c5ec8a2be16f40bf98b1e",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "DnEU",
+      "code_hash": "f7295c1eb2eff9314caf502afd210c83",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ulZA",
+      "code_hash": "bca30deffac76c6af245c182654388ec",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ecfG",
+      "code_hash": "6c4f0d5eb888cdacfaeffe7ac26a3f96",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Pvdt",
+      "code_hash": "56157368f53053d74d63a66e53e6c0b0",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ZBYS",
+      "code_hash": "df70a650b05352a7b9463bde71f9a701",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "aLJB",
+      "code_hash": "baf80ff7831355fdd138ebb8ffe90c0c",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "nHfw",
+      "code_hash": "d1409524a7c8b6b095fbe6b3ab6e5181",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "xXTn",
+      "code_hash": "aceab28565023512081e8a9119d2626a",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "pHFh",
+      "code_hash": "4aba5cc8829d94306b0ef001ccd98ea9",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "NCOB",
+      "code_hash": "67675375f71273c75d98bbd1558370b2",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "aqbW",
+      "code_hash": "b865675429f3e3ea33091db568d8daec",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "TRpd",
+      "code_hash": "76f28366de04a6c4ef3dfefd83261563",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "TXez",
+      "code_hash": "c76a824e240b156b2fbf3f42c10d704f",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "dNNg",
+      "code_hash": "cf7daf6a9459c85800e616f11c822bcf",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "wlCL",
+      "code_hash": "264e139dbda06f909550b2e75c5f3787",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "kqZH",
+      "code_hash": "47d0eb8a167c14bf2ace8ffbf74b1165",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "wAgl",
+      "code_hash": "2903171bcda46687ad328305f6b39db7",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "rEll",
+      "code_hash": "09e29f88f099913b8805c23fa4502066",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "dGlV",
+      "code_hash": "b5710b591c2b403775e5a3d6ccd9e63e",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "SdmI",
+      "code_hash": "75396a0e961c3fbf6aa6296abd636716",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "yOPj",
+      "code_hash": "a1a6d7693bc0fb1477d7090e09152b4d",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "fwwy",
+      "code_hash": "d8817cd33ff8932d5d1c1c580e28ca1b",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "LJZf",
+      "code_hash": "03d060d6b8fe1726f777404b0013b2d5",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "urSm",
+      "code_hash": "6bc44e6bd49747c492b5c8ba194d274b",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "jxvo",
+      "code_hash": "32a10ab91e822ca470e0b39236d04bf1",
+      "outputs": [],
+      "console": []
+    }
+  ]
+}
