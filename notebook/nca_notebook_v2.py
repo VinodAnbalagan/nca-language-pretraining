@@ -20,7 +20,7 @@ def _():
     from IPython.display import HTML
     import random
 
-    # House style — single source of truth for all figures in this notebook.
+    # House style, single source of truth for all figures in this notebook.
     import theme
     theme.apply_rc()
     return (
@@ -48,21 +48,22 @@ def _(mo):
 
     ---
 
-    The authors show a counterintuitive result: you can pre-train a
-    transformer on the outputs of randomly-initialised cellular automata
-    **synthetic, non-linguistic data**, and it improves downstream
-    language modelling. Their claim is that the NCA-generated sequences
-    carry enough structure to teach a transformer the *reasoning* part
-    of language before it ever sees a word.
+    ### Abstract
 
-    This notebook asks a narrower question, at a much smaller scale:
-    **what exactly gets installed, and does fine-tuning preserve it?**
+    Lee et al. show that pre-training a transformer on randomly-initialised
+    cellular automata, synthetic non-linguistic data, improves downstream
+    language modelling at 400M scale (~6% perplexity). *What* transfers is
+    unclear from their paper.
 
-    We probe the attention circuits directly - not loss, not perplexity,
-    and track what happens mechanistically during fine-tuning on a toy
-    task (Dyck-1, balanced brackets). We find that NCA pre-training
-    installs induction-head-like structure in Layer 1, that standard
-    fine-tuning destroys it, and that two simple recipes preserve it.
+    We probe the attention circuits directly on a toy task (Dyck-1) with
+    a tiny transformer (~150k params). The findings: NCA pre-training
+    installs induction-head-like structure in Layer 1 before any language
+    data; standard fine-tuning destroys it within 20 epochs; and two
+    simple recipes, a 10× slower learning rate on transferred blocks, or
+    freezing attention outright, preserve it through 80 epochs.
+
+    **Contribution:** a mechanistic account of *what* NCA pre-training
+    transfers, and a practical warning that naive fine-tuning wastes it.
     """)
     return
 
@@ -139,12 +140,12 @@ def _(mo, theme):
 def _(mo):
     mo.md("""
     ---
-    ## Section 1 — The NCA Generator
+    ## Section 1. The NCA Generator
 
     A Neural Cellular Automaton is a grid where each cell updates based
     on its 3×3 neighbourhood, using a small fixed neural network as the
     rule. Different random initialisations of that network give
-    completely different dynamics — some converge to fixed points, some
+    completely different dynamics: some converge to fixed points, some
     form stripes, some stay chaotic.
 
     The key property for our purposes: **the rule is the same everywhere
@@ -293,7 +294,7 @@ def _(T_slider, make_colormap, mo, n_slider, plt, run_nca, seed_slider, theme):
         title=f"t = {T_slider.value}  (after {T_slider.value} updates)")
 
     theme.suptitle(_fig,
-        f"A single NCA rule evolving — n={n_slider.value} states, seed={seed_slider.value}")
+        f"A single NCA rule evolving. n={n_slider.value} states, seed={seed_slider.value}")
     _fig.tight_layout()
     mo.mpl.interactive(_fig)
     return
@@ -313,7 +314,7 @@ def _(
     theme,
 ):
     # Animated evolution of the selected rule. Depends on run_nca via the
-    # cell signature (marimo's dependency model) — no hacks.
+    # cell signature (marimo's dependency model). No hacks.
     _traj_anim = run_nca(n=n_slider.value, T=T_slider.value,
                          seed=seed_slider.value)
     _cmap_a, _norm_a = make_colormap(n_slider.value)
@@ -344,8 +345,8 @@ def _(mo):
     mo.md("""
     ### Four rules, same math, different universes
 
-    Below: the same code, the same update equation, the same grid size —
-    only the random seed of the rule network changes. Each column shows
+    Below: the same code, the same update equation, the same grid size.
+    Only the random seed of the rule network changes. Each column shows
     one rule's trajectory from its random initial state to its attractor.
     """)
     return
@@ -354,9 +355,9 @@ def _(mo):
 @app.cell
 def _(make_colormap, mo, plt, run_nca, theme):
     # Curated set of seeds chosen to display four qualitatively different
-    # dynamics. If any of these converge to uniform at n=2, swap them out
-    # — the point of this figure is visual variety.
-    _SHOWCASE_SEEDS = [1, 3, 7, 11]
+    # dynamics. Selected empirically by searching seeds 0-200 for one
+    # example each of: chaos, patches, vertical stripes, horizontal stripes.
+    _SHOWCASE_SEEDS = [6, 10, 15, 4]
     _n_val, _T_val = 2, 30
     _cmap_g, _norm_g = make_colormap(_n_val)
 
@@ -387,7 +388,7 @@ def _(make_colormap, mo, plt, run_nca, theme):
 def _(mo):
     mo.md("""
     ---
-    ## Section 2 — From Grid to Token
+    ## Section 2. From Grid to Token
 
     The grid is spatial. A transformer wants a 1D sequence of token IDs.
     The bridge is simple: chop the grid into `p × p` patches and hash
@@ -407,10 +408,12 @@ def _(mo):
 def _(make_colormap, mo, plt, run_nca, theme):
     # Visual: raw NCA grid on the left, tokenised grid on the right with
     # patch boundaries and token IDs overlaid. This is the diagram of the
-    # tokenisation pipeline — by far the most-looked-at figure in the paper.
+    # tokenisation pipeline, by far the most-looked-at figure in the paper.
+    # Seed 23 chosen empirically for ~50/50 colour mix with high local
+    # activity, so the 2x2 patches produce a diverse token grid.
     _p, _n = 2, 2
     _vocab_size = _n ** (_p * _p)
-    _traj_s2 = run_nca(n=_n, T=20, H=16, W=16, seed=1)
+    _traj_s2 = run_nca(n=_n, T=20, H=16, W=16, seed=23)
     _grid = _traj_s2[20]
     _cmap_p, _norm_p = make_colormap(_n)
 
@@ -428,7 +431,7 @@ def _(make_colormap, mo, plt, run_nca, theme):
     _ax_r.imshow(_grid, cmap=_cmap_p, norm=_norm_p,
                  interpolation="nearest", alpha=0.4)
     theme.style_image_axes(_ax_r,
-        title=f"Patches → Tokens  (vocab = {_vocab_size})")
+        title=f"Patches to Tokens  (vocab = {_vocab_size})")
     for _i in range(0, _H, _p):
         for _j in range(0, _W, _p):
             _patch = _grid[_i:_i+_p, _j:_j+_p].flatten()
@@ -444,7 +447,7 @@ def _(make_colormap, mo, plt, run_nca, theme):
                                            facecolor="none", alpha=0.5))
 
     theme.suptitle(_fig,
-        f"Tokenisation  ·  n={_n}, patch={_p}×{_p}  →  vocab = {_vocab_size}")
+        f"Tokenisation  ·  n={_n}, patch={_p}x{_p}  ->  vocab = {_vocab_size}")
     _fig.tight_layout()
     mo.mpl.interactive(_fig)
     return
@@ -453,7 +456,7 @@ def _(make_colormap, mo, plt, run_nca, theme):
 @app.cell
 def _(mo, np, plt, theme):
     # Why we chose n=2, patch=2: anything bigger blows vocabulary into the
-    # billions. Single compact plot — this used to be a full "Zipf section".
+    # billions. Single compact plot (this used to be a full "Zipf section").
     _fig, _ax = plt.subplots(figsize=(9, 4.5))
     theme.style_figure(_fig)
     theme.style_axes(_ax,
@@ -470,7 +473,7 @@ def _(mo, np, plt, theme):
     for _p, _colour in _patch_colours.items():
         _vocab = _n_vals ** (_p * _p)
         _ax.semilogy(_n_vals, _vocab, color=_colour, linewidth=2,
-                     label=f"patch {_p}×{_p}  (vocab = n^{_p*_p})",
+                     label=f"patch {_p}x{_p}  (vocab = n^{_p*_p})",
                      marker="o", markersize=4)
 
     _ax.axvline(2, color=theme.FG_MUTED, linestyle="--", alpha=0.5,
@@ -516,9 +519,9 @@ def _():
 def _(mo):
     mo.md("""
     ---
-    ## Section 3 — What Did Pre-Training Install?
+    ## Section 3. What Did Pre-Training Install?
 
-    We train two tiny transformers (2 layers, 4 heads, 64 dim —
+    We train two tiny transformers (2 layers, 4 heads, 64 dim,
     ~150k params):
 
     - **Scratch:** random init, fine-tune directly on Dyck-1 (balanced
@@ -752,8 +755,8 @@ def _(mo):
         mo.md(
             """
             **Training produces two models:**
-            Scratch (random init → Dyck) and NCA (NCA pre-train → swap task
-            head → Dyck). Runs fully on CPU, ~5 minutes.
+            Scratch (random init -> Dyck) and NCA (NCA pre-train -> swap task
+            head -> Dyck). Runs fully on CPU, ~5 minutes.
             """
         ),
         train_btn,
@@ -824,7 +827,7 @@ def _(
 
 @app.cell
 def _(torch):
-    # Probe sequence: "((()(()))EOS" — a balanced string where bracket-
+    # Probe sequence: "((()(()))EOS", a balanced string where bracket-
     # matching is unambiguous. The MATCHING_PAIRS dict tells us which
     # (close, open) positions should attend to each other if the model
     # has learnt bracket matching.
@@ -850,7 +853,7 @@ def _(
     theme,
 ):
     # Four-panel attention heatmap: Scratch e0, Scratch e5, NCA e0, NCA e5.
-    # This is the single most important figure in the notebook — the
+    # This is the single most important figure in the notebook, the
     # "where is the model looking" picture.
     if scratch_ckpts is None:
         mo.stop(True, mo.md("*Train the models first.*"))
@@ -898,10 +901,10 @@ def _(
 
     _gspec = _gs.GridSpec(2, 2, figure=_fig, hspace=0.4, wspace=0.3)
     _panels = [
-        (0, 0, scratch_ckpts, 0, "Scratch — epoch 0\nrandom init, no Dyck"),
-        (0, 1, scratch_ckpts, 5, "Scratch — epoch 5\nafter 5 epochs of Dyck"),
-        (1, 0, nca_ckpts,     0, "NCA pretrained — epoch 0\nafter NCA, before any Dyck"),
-        (1, 1, nca_ckpts,     5, "NCA pretrained — epoch 5\nafter 5 epochs of Dyck"),
+        (0, 0, scratch_ckpts, 0, "Scratch, epoch 0\nrandom init, no Dyck"),
+        (0, 1, scratch_ckpts, 5, "Scratch, epoch 5\nafter 5 epochs of Dyck"),
+        (1, 0, nca_ckpts,     0, "NCA pretrained, epoch 0\nafter NCA, before any Dyck"),
+        (1, 1, nca_ckpts,     5, "NCA pretrained, epoch 5\nafter 5 epochs of Dyck"),
     ]
     for _row, _col, _ckpts, _ep, _title in _panels:
         _ax = _fig.add_subplot(_gspec[_row, _col])
@@ -926,9 +929,8 @@ def _(
     scratch_ckpts,
     theme,
 ):
-    # Bracket-score bar chart. FIX vs v1: legend was eating the tallest bar.
-    # Now: legend outside the plot area (upper right of figure), y-limit is
-    # fixed, and the ylim multiplier doesn't push bars into the legend.
+    # Bracket-score bar chart. Fixed ylim at 0.37 so the legend doesn't
+    # overlap the tallest bar.
     if scratch_ckpts is None:
         mo.stop(True, mo.md("*Train the models first.*"))
 
@@ -964,7 +966,6 @@ def _(
     theme.style_axes(_ax,
         ylabel="Bracket attention score", grid_axis="y")
 
-    # Shade the NCA conditions subtly.
     _ax.axvspan(1.5, 3.5, alpha=0.08, color=theme.PALETTE["green"], zorder=0)
 
     _b0 = _ax.bar(_x - _w/2, [_scores_l0[l] for l in _lbls], _w,
@@ -986,14 +987,13 @@ def _(
 
     _ax.set_xticks(_x)
     _ax.set_xticklabels(_lbls, fontsize=10, color=theme.FG)
-    _ax.set_ylim(0, 0.37)  # fixed ceiling — no legend overlap
+    _ax.set_ylim(0, 0.37)
 
     _ax.set_title(
         "NCA pre-training installs Layer 1 structure BEFORE seeing brackets",
         color=theme.FG, fontsize=12, pad=12, loc="left",
         fontweight="semibold")
 
-    # Legend placed above the plot to free vertical space.
     _leg = _ax.legend(loc="upper right", ncol=1,
                       bbox_to_anchor=(1.0, 1.0), framealpha=0.95)
     theme.style_legend(_leg)
@@ -1036,7 +1036,7 @@ def _(mo, theme):
 def _(mo):
     mo.md("""
     ---
-    ## Section 4 — Catastrophic Forgetting
+    ## Section 4. Catastrophic Forgetting
 
     We extend the previous experiment to 80 epochs of fine-tuning across
     three random seeds each, probing Layer 1 at epochs 0, 5, 20, 40, 80.
@@ -1051,7 +1051,7 @@ def _(mo):
 @app.cell
 def _(np):
     # Pre-computed from the day_3_test.py runs (3 seeds per condition).
-    # These are the actual measurements — not simulated.
+    # These are the actual measurements, not simulated.
     PROBE_EPOCHS = [0, 5, 20, 40, 80]
     L1_SCORES = {
         "A: Scratch":                [0.179, 0.156, 0.126, 0.143, 0.144],
@@ -1086,9 +1086,6 @@ def _(np):
             44: [0.5865, 0.5733, 0.5562, 0.5562, 0.5527, 0.5522, 0.5518, 0.5536]},
     }
 
-    # Compute mean/std. For condition B we use median+IQR to avoid the
-    # single-seed divergence at epoch 80 (seed 42: 0.6177) dominating the
-    # band. This is an honest choice, flagged to the reader in a caption.
     LOSS_MEAN = {}
     LOSS_STD  = {}
     LOSS_BAND_LOW = {}
@@ -1097,7 +1094,6 @@ def _(np):
         _arr = np.array(list(_seeds.values()))
         LOSS_MEAN[_cond] = _arr.mean(axis=0).tolist()
         LOSS_STD[_cond]  = _arr.std(axis=0).tolist()
-        # Median + IQR for robust bands
         LOSS_BAND_LOW[_cond]  = np.percentile(_arr, 25, axis=0).tolist()
         LOSS_BAND_HIGH[_cond] = np.percentile(_arr, 75, axis=0).tolist()
     return (
@@ -1123,9 +1119,7 @@ def _(
     plt,
     theme,
 ):
-    # Validation loss with robust (median + IQR) bands. FIX vs v1: the
-    # mean+std band was blown out by seed 42 diverging at epoch 80.
-    # IQR is less sensitive to that single-seed outlier.
+    # Median + IQR bands. Robust to the seed-42 divergence at epoch 80.
     _fig, _axes = plt.subplots(1, 2, figsize=(14, 5))
     theme.style_figure(_fig)
     theme.suptitle(_fig,
@@ -1156,9 +1150,9 @@ def _(
 
 @app.cell
 def _(L0_SCORES, L1_SCORES, PROBE_EPOCHS, RANDOM_BASELINE, mo, plt, theme):
-    # Bracket-attention trajectory. FIX vs v1: annotations "Catastrophic
-    # forgetting" and "Circuits protected" were clipping the legend. Now
-    # placed in the lower area where there's empty space, pointing up.
+    # Bracket-attention trajectory. Annotations placed in the lower area
+    # (empty space above the dashed random-baseline line) with arrows
+    # curving up to target the correct condition's line.
     _fig, _axes = plt.subplots(1, 2, figsize=(14, 5))
     theme.style_figure(_fig)
     theme.suptitle(_fig, "Bracket attention score over 80 epochs of fine-tuning")
@@ -1178,27 +1172,29 @@ def _(L0_SCORES, L1_SCORES, PROBE_EPOCHS, RANDOM_BASELINE, mo, plt, theme):
                      color=theme.CONDITION_COLOURS[_lbl],
                      label=theme.CONDITION_LABELS_SHORT[_lbl],
                      linewidth=2.5, marker="o", markersize=6)
-        _ax.set_ylim(0.08, 0.29)
+        _ax.set_ylim(0.085, 0.29)
 
-        # Annotations for Layer 1 only — placed in the bottom half of the
-        # plot, pointing up toward their subjects. This avoids the legend.
         if "Layer 1" in _panel_title:
+            # Blue: point at std-LR downslope at epoch 40 (score 0.192),
+            # label in lower-left of plot.
             _ax.annotate(
                 "Standard fine-tuning\nerodes the circuit",
-                xy=(20, L1_SCORES["B: NCA standard LR"][2]),
-                xytext=(30, 0.100),
-                color=theme.PALETTE["blue"], fontsize=9, ha="left",
+                xy=(40, L1_SCORES["B: NCA standard LR"][3]),
+                xytext=(20, 0.140),
+                color=theme.PALETTE["blue"], fontsize=9, ha="center",
                 arrowprops=dict(arrowstyle="->",
                                 color=theme.PALETTE["blue"], lw=1.2,
-                                connectionstyle="arc3,rad=0.2"))
+                                connectionstyle="arc3,rad=-0.2"))
+            # Green: point at slow-LR plateau at epoch 60 (interpolated),
+            # label in lower-centre.
             _ax.annotate(
                 "Our recipes\npreserve it",
-                xy=(60, L1_SCORES["E: NCA slow LR (ours)"][-2]),
-                xytext=(55, 0.095),
-                color=theme.PALETTE["green"], fontsize=9, ha="left",
+                xy=(70, L1_SCORES["E: NCA slow LR (ours)"][3]),
+                xytext=(55, 0.140),
+                color=theme.PALETTE["green"], fontsize=9, ha="center",
                 arrowprops=dict(arrowstyle="->",
                                 color=theme.PALETTE["green"], lw=1.2,
-                                connectionstyle="arc3,rad=-0.2"))
+                                connectionstyle="arc3,rad=0.2"))
 
         theme.style_legend(_ax.legend(loc="upper right", fontsize=8))
 
@@ -1224,7 +1220,7 @@ def _(mo, theme):
                   margin-bottom: 6px;">The problem</div>
       <div style="font-size: 15px; line-height: 1.6;">
         Layer 1 score drops from <b>0.248</b> at epoch 0 to <b>0.181</b> at
-        epoch 80 under standard fine-tuning — essentially back to scratch
+        epoch 80 under standard fine-tuning, essentially back to scratch
         (0.144). This is catastrophic forgetting visible at the circuit
         level, not at the loss level: the loss curves all hit the same
         floor (~0.551) because Dyck-1 is too easy at this model scale.
@@ -1239,7 +1235,7 @@ def _(mo, theme):
 def _(mo):
     mo.md("""
     ---
-    ## Section 5 — The Fix
+    ## Section 5. The Fix
 
     Two simple recipes, both validated across three seeds:
 
@@ -1256,10 +1252,7 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    # Interactive scrubber — the real "marimo moment" in this notebook.
-    # Judges are looking for UI that teaches. This lets a reader see the
-    # forgetting curve at any epoch, with the numbers formatted for
-    # quick comparison.
+    # Interactive scrubber, the real "marimo moment" in this notebook.
     epoch_scrubber = mo.ui.slider(
         start=0, stop=80, step=1, value=0,
         label="Fine-tuning epoch",
@@ -1277,8 +1270,6 @@ def _(mo):
 
 @app.cell
 def _(L1_SCORES, PROBE_EPOCHS, RANDOM_BASELINE, epoch_scrubber, mo, np, theme):
-    # Render as a live HTML bar chart rather than matplotlib — it's fully
-    # interactive and updates instantly without re-running matplotlib.
     _ep = epoch_scrubber.value
     _bars = []
     _max_val = 0.28
@@ -1314,7 +1305,6 @@ def _(L1_SCORES, PROBE_EPOCHS, RANDOM_BASELINE, epoch_scrubber, mo, np, theme):
         </div>
         """)
 
-    # Baseline marker line position on the bar scale.
     _baseline_pct = (RANDOM_BASELINE / _max_val) * 100
 
     _html = f"""
@@ -1344,7 +1334,7 @@ def _(L1_SCORES, PROBE_EPOCHS, RANDOM_BASELINE, epoch_scrubber, mo, np, theme):
                   margin-top: 14px; padding-top: 12px;
                   border-top: 1px solid {theme.SPINE};">
         Random baseline (uniform attention) = {RANDOM_BASELINE:.3f}.
-        Bar scale: 0 → {_max_val}. Interpolated linearly between probe
+        Bar scale: 0 to {_max_val}. Interpolated linearly between probe
         epochs {PROBE_EPOCHS}.
       </div>
     </div>
@@ -1367,12 +1357,10 @@ def _(
     theme,
 ):
     # Final summary figure: loss curves + end-of-training bar chart.
-    # This is the "does the fix work" visual pair.
     _fig, _axes = plt.subplots(1, 2, figsize=(14, 5.5))
     theme.style_figure(_fig)
     theme.suptitle(_fig, "The fix  ·  two recipes that preserve the circuit")
 
-    # Left: validation loss
     theme.style_axes(_axes[0], xlabel="Epoch", ylabel="Validation loss",
                      title="Validation loss  ·  lower = better")
     for _cond, _colour in theme.CONDITION_COLOURS.items():
@@ -1386,7 +1374,6 @@ def _(
         _axes[0].fill_between(_ep, _low, _high, color=_colour, alpha=0.15)
     theme.style_legend(_axes[0].legend(loc="upper right", fontsize=8))
 
-    # Right: Layer 1 score at epoch 80
     _conditions = list(theme.CONDITION_COLOURS.keys())
     _scores_80 = {c: L1_SCORES[c][-1] for c in _conditions}
     _colours = [theme.CONDITION_COLOURS[c] for c in _conditions]
@@ -1462,7 +1449,7 @@ def _(mo, theme):
           <div style="color: {theme.FG}; font-size: 14px; line-height: 1.6;">
             <b>NCA pre-training installs induction-head circuits in Layer 1.</b>
             &nbsp;<span style="color: {theme.FG_MUTED}">
-            Score: 0.248 vs random baseline 0.111 — before seeing a single bracket.
+            Score: 0.248 vs random baseline 0.111, before seeing a single bracket.
             </span>
           </div>
         </div>
@@ -1475,7 +1462,7 @@ def _(mo, theme):
           <div style="color: {theme.FG}; font-size: 14px; line-height: 1.6;">
             <b>Standard fine-tuning destroys them.</b>
             &nbsp;<span style="color: {theme.FG_MUTED}">
-            Score falls 0.248 → 0.181 over 80 epochs. Catastrophic forgetting
+            Score falls 0.248 to 0.181 over 80 epochs. Catastrophic forgetting
             at the circuit level.
             </span>
           </div>
@@ -1489,7 +1476,7 @@ def _(mo, theme):
           <div style="color: {theme.FG}; font-size: 14px; line-height: 1.6;">
             <b>Slow LR or frozen attention preserves them.</b>
             &nbsp;<span style="color: {theme.FG_MUTED}">
-            Score holds at 0.221–0.224. Validation loss matches Scratch.
+            Score holds at 0.221 to 0.224. Validation loss matches Scratch.
             The mechanism survives fine-tuning.
             </span>
           </div>
@@ -1550,7 +1537,7 @@ def _(mo):
 
     *Built for the marimo × alphaXiv Notebook Competition, April 2026.*
     *Code: github.com/vinodanbalagan/nca-language-pretraining*
-    *Writeup: The Meta Gradient — substack.com/@vinodanbalagan*
+    *Writeup: The Meta Gradient, substack.com/@vinodanbalagan*
     """)
     return
 
