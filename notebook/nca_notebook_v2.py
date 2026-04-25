@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.11"
+__generated_with = "0.23.3"
 app = marimo.App(
     width="medium",
     app_title="Training Language Models via Neural Cellular Automata",
@@ -16,8 +16,6 @@ def _():
     import torch.nn.functional as F
     import matplotlib.pyplot as plt
     import matplotlib.colors as mcolors
-    from matplotlib.animation import FuncAnimation
-    from IPython.display import HTML
     import random
 
     # House style, single source of truth for all figures in this notebook.
@@ -25,8 +23,6 @@ def _():
     theme.apply_rc()
     return (
         F,
-        FuncAnimation,
-        HTML,
         mcolors,
         mo,
         nn,
@@ -41,6 +37,34 @@ def _():
 @app.cell
 def _(mo):
     mo.md("""
+    # What if language isn't special?
+
+    Large language models learn from text. But high-quality text is
+    finite, projected to run out within years at current consumption
+    rates. And text comes with baggage: biases, shallow co-occurrence
+    patterns, knowledge entangled with reasoning.
+
+    Lee et al. (2026) asked a radical question: **what if the useful
+    thing about language isn't the words, it's the structure?** And if
+    so, could a model learn that structure from something simpler than
+    language?
+
+    Their answer: Neural Cellular Automata. Abstract grid dynamics with
+    zero semantic content. Pre-train on these, then switch to language.
+    Result: 6% better perplexity at 400M scale.
+
+    This notebook asks the next question: **what exactly did the model
+    learn from those grids?** We open the hood, look at the attention
+    circuits, and find something the paper doesn't report.
+
+    *Vinod Anbalagan · April 2026 · [The Meta Gradient](https://substack.com/@vinodanbalagan)*
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
     # Training Language Models via Neural Cellular Automata
 
     **A marimo × alphaXiv competition notebook.**
@@ -50,20 +74,22 @@ def _(mo):
 
     ### Abstract
 
-    Lee et al. show that pre-training a transformer on randomly-initialised
-    cellular automata, synthetic non-linguistic data, improves downstream
-    language modelling at 400M scale (~6% perplexity). *What* transfers is
-    unclear from their paper.
+    Lee et al. show that pre-training on cellular automata, abstract
+    grid dynamics with no linguistic content, improves language
+    modelling by 6% at scale. They don't explain *what* transfers.
 
-    We probe the attention circuits directly on a toy task (Dyck-1) with
-    a tiny transformer (~150k params). The findings: NCA pre-training
-    installs induction-head-like structure in Layer 1 before any language
-    data; standard fine-tuning destroys it within 20 epochs; and two
-    simple recipes, a 10× slower learning rate on transferred blocks, or
-    freezing attention outright, preserve it through 80 epochs.
+    **We open the model and look.**
 
-    **Contribution:** a mechanistic account of *what* NCA pre-training
-    transfers, and a practical warning that naive fine-tuning wastes it.
+    Using a 150k-parameter toy transformer and bracket-matching as a
+    probe task, we find that NCA pre-training installs induction-head
+    circuits in Layer 1, measurable before the model sees any language.
+    Standard fine-tuning destroys these circuits within 20 epochs. Two
+    simple recipes, a slower learning rate on transferred blocks or
+    freezing attention outright, preserve them through 80 epochs of
+    task fine-tuning.
+
+    **Contribution:** the first mechanistic account of what NCA
+    pre-training transfers, and a practical fix the paper doesn't mention.
     """)
     return
 
@@ -255,14 +281,13 @@ def _(mcolors, np, plt, theme):
 
 @app.cell
 def _(mo):
-    # Defaults locked to n=2. This matches what we actually use downstream
-    # (tokenisation with patch=2 gives vocab=16). The reader can still
-    # explore larger n, but the "home" state of the notebook is consistent.
+    # Defaults locked to n=2. Seed default = 6 so the reader sees an
+    # interesting chaotic attractor on first load, not a collapsed grid.
     n_slider    = mo.ui.slider(start=2, stop=6,  step=1, value=2,
                                label="Alphabet size n")
     T_slider    = mo.ui.slider(start=5, stop=60, step=5, value=30,
                                label="Timesteps T")
-    seed_slider = mo.ui.slider(start=0, stop=99, step=1, value=1,
+    seed_slider = mo.ui.slider(start=0, stop=99, step=1, value=6,
                                label="Rule seed")
     return T_slider, n_slider, seed_slider
 
@@ -297,46 +322,6 @@ def _(T_slider, make_colormap, mo, n_slider, plt, run_nca, seed_slider, theme):
         f"A single NCA rule evolving. n={n_slider.value} states, seed={seed_slider.value}")
     _fig.tight_layout()
     mo.mpl.interactive(_fig)
-    return
-
-
-@app.cell
-def _(
-    FuncAnimation,
-    HTML,
-    T_slider,
-    make_colormap,
-    mo,
-    n_slider,
-    plt,
-    run_nca,
-    seed_slider,
-    theme,
-):
-    # Animated evolution of the selected rule. Depends on run_nca via the
-    # cell signature (marimo's dependency model). No hacks.
-    _traj_anim = run_nca(n=n_slider.value, T=T_slider.value,
-                         seed=seed_slider.value)
-    _cmap_a, _norm_a = make_colormap(n_slider.value)
-
-    _fig_a, _ax_a = plt.subplots(figsize=(4.5, 4.5))
-    theme.style_figure(_fig_a)
-    theme.style_image_axes(_ax_a)
-
-    _im = _ax_a.imshow(_traj_anim[0], cmap=_cmap_a, norm=_norm_a,
-                        interpolation="nearest", animated=True)
-    _title = _ax_a.set_title("t = 0", color=theme.FG, fontsize=11, pad=8)
-
-    def _update(frame):
-        _im.set_data(_traj_anim[frame])
-        _title.set_text(f"t = {frame}")
-        return _im, _title
-
-    _anim = FuncAnimation(_fig_a, _update,
-                           frames=T_slider.value + 1,
-                           interval=120, blit=True)
-    _fig_a.tight_layout()
-    mo.Html(HTML(_anim.to_jshtml()).data)
     return
 
 
@@ -381,6 +366,18 @@ def _(make_colormap, mo, plt, run_nca, theme):
     theme.suptitle(_fig, f"Four different NCA rules  ·  n={_n_val}, T={_T_val}")
     _fig.tight_layout()
     mo.mpl.interactive(_fig)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    Four random seeds. Four completely different dynamics. Each one is
+    a unique "language" the transformer must learn to predict.
+
+    But a transformer doesn't see grids. It sees token sequences.
+    **How do we bridge the gap?**
+    """)
     return
 
 
@@ -489,6 +486,20 @@ def _(mo, np, plt, theme):
     theme.style_legend(_ax.legend(loc="upper left"))
     _fig.tight_layout()
     mo.mpl.interactive(_fig)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    So: a 16×16 grid becomes 64 tokens from a vocabulary of 16. A
+    trajectory of 2 steps becomes a 128-token sequence. The transformer
+    trains on next-token prediction over these sequences, each generated
+    by a different hidden rule.
+
+    The claim: this pre-training installs useful computational circuits.
+    **Can we see them?**
+    """)
     return
 
 
@@ -1044,6 +1055,12 @@ def _(mo):
     The pattern: **standard fine-tuning destroys the installed circuits
     within 20 epochs.** The model ends up no better than Scratch despite
     starting 40% above it.
+
+    *Note on the numbers:* the live-trained model above uses a single
+    seed and 5 epochs, which is what fits on CPU in ~5 minutes. The
+    results in this section are from a separate, seeded 3-seed × 80-epoch
+    run archived in `results/`. Numbers differ slightly run-to-run; the
+    pattern doesn't.
     """)
     return
 
@@ -1175,8 +1192,6 @@ def _(L0_SCORES, L1_SCORES, PROBE_EPOCHS, RANDOM_BASELINE, mo, plt, theme):
         _ax.set_ylim(0.085, 0.29)
 
         if "Layer 1" in _panel_title:
-            # Blue: point at std-LR downslope at epoch 40 (score 0.192),
-            # label in lower-left of plot.
             _ax.annotate(
                 "Standard fine-tuning\nerodes the circuit",
                 xy=(40, L1_SCORES["B: NCA standard LR"][3]),
@@ -1185,8 +1200,6 @@ def _(L0_SCORES, L1_SCORES, PROBE_EPOCHS, RANDOM_BASELINE, mo, plt, theme):
                 arrowprops=dict(arrowstyle="->",
                                 color=theme.PALETTE["blue"], lw=1.2,
                                 connectionstyle="arc3,rad=-0.2"))
-            # Green: point at slow-LR plateau at epoch 60 (interpolated),
-            # label in lower-centre.
             _ax.annotate(
                 "Our recipes\npreserve it",
                 xy=(70, L1_SCORES["E: NCA slow LR (ours)"][3]),
