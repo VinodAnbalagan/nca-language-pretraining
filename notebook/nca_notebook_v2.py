@@ -15,23 +15,134 @@ def _():
     import torch.nn as nn
     import torch.nn.functional as F
     import matplotlib.pyplot as plt
+    import matplotlib as mpl
     import matplotlib.colors as mcolors
     import random
 
-    # House style, single source of truth for all figures in this notebook.
-    import theme
+    class Theme:
+        """
+        Single source of visual truth for the notebook, inlined from theme.py.
+        """
+        BG = "#0f1419"
+        PANEL = "#151a21"
+        FG = "#e6e6e6"
+        FG_MUTED = "#8a94a6"
+        GRID = "#2a303a"
+        SPINE = "#3a4250"
+
+        CONDITION_COLOURS = {
+            "A: Scratch":                "#8a94a6",
+            "B: NCA standard LR":        "#4dabf7",
+            "E: NCA slow LR (ours)":     "#51cf66",
+            "F: NCA frozen attn (ours)": "#ffa94d",
+        }
+
+        CONDITION_LABELS_SHORT = {
+            "A: Scratch":                "Scratch",
+            "B: NCA standard LR":        "NCA (std LR)",
+            "E: NCA slow LR (ours)":     "NCA + slow LR",
+            "F: NCA frozen attn (ours)": "NCA + frozen attn",
+        }
+
+        PALETTE = {
+            "blue":   "#4dabf7",
+            "green":  "#51cf66",
+            "orange": "#ffa94d",
+            "red":    "#ff6b6b",
+            "purple": "#b197fc",
+            "yellow": "#ffd43b",
+            "cyan":   "#3bc9db",
+        }
+
+        NCA_BINARY = ["#1e3a5f", "#ffa94d"]
+
+        def style_figure(self, fig):
+            fig.patch.set_facecolor(self.BG)
+            return fig
+
+        def style_axes(self, ax, *, title=None, xlabel=None, ylabel=None, grid=True, grid_axis="both", show_top_right_spines=False):
+            ax.set_facecolor(self.BG)
+
+            if title is not None:
+                ax.set_title(title, color=self.FG, fontsize=12, pad=10, loc="left", fontweight="semibold")
+            if xlabel is not None:
+                ax.set_xlabel(xlabel, color=self.FG_MUTED, fontsize=10)
+            if ylabel is not None:
+                ax.set_ylabel(ylabel, color=self.FG_MUTED, fontsize=10)
+
+            ax.tick_params(colors=self.FG_MUTED, labelsize=9)
+
+            for side in ("left", "bottom"):
+                ax.spines[side].set_color(self.SPINE)
+                ax.spines[side].set_linewidth(0.8)
+            for side in ("top", "right"):
+                ax.spines[side].set_visible(show_top_right_spines)
+                if show_top_right_spines:
+                    ax.spines[side].set_color(self.SPINE)
+                    ax.spines[side].set_linewidth(0.8)
+
+            if grid:
+                ax.grid(True, axis=grid_axis, color=self.GRID, linewidth=0.5, alpha=0.6, zorder=0)
+                ax.set_axisbelow(True)
+
+            return ax
+
+        def style_legend(self, legend):
+            if legend is None:
+                return
+            frame = legend.get_frame()
+            frame.set_facecolor(self.PANEL)
+            frame.set_edgecolor(self.SPINE)
+            frame.set_linewidth(0.8)
+            frame.set_alpha(0.95)
+            for text in legend.get_texts():
+                text.set_color(self.FG)
+                text.set_fontsize(9)
+            return legend
+
+        def style_image_axes(self, ax, title=None):
+            ax.set_facecolor(self.BG)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_color(self.SPINE)
+                spine.set_linewidth(0.8)
+            if title is not None:
+                ax.set_title(title, color=self.FG, fontsize=11, pad=8)
+            return ax
+
+        def suptitle(self, fig, text, y=0.98):
+            fig.suptitle(text, color=self.FG, fontsize=13, fontweight="semibold", y=y)
+
+        def apply_rc(self):
+            mpl.rcParams.update({
+                "figure.facecolor":  self.BG,
+                "axes.facecolor":    self.BG,
+                "savefig.facecolor": self.BG,
+                "savefig.dpi":       120,
+                "figure.dpi":        110,
+                "font.family":       "sans-serif",
+                "font.sans-serif":   ["Inter", "SF Pro Display", "Helvetica Neue", "Arial", "DejaVu Sans"],
+                "font.size":         10,
+                "lines.linewidth":   2.0,
+                "lines.markersize":  5,
+                "text.color":        self.FG,
+                "axes.labelcolor":   self.FG_MUTED,
+                "xtick.color":       self.FG_MUTED,
+                "ytick.color":       self.FG_MUTED,
+                "axes.edgecolor":    self.SPINE,
+                "legend.frameon":    True,
+                "legend.facecolor":  self.PANEL,
+                "legend.edgecolor":  self.SPINE,
+                "legend.fontsize":   9,
+                "axes.titlepad":     10,
+                "axes.labelpad":     6,
+            })
+
+    # Instantiate the theme exactly as if it were imported
+    theme = Theme()
     theme.apply_rc()
-    return (
-        F,
-        mcolors,
-        mo,
-        nn,
-        np,
-        plt,
-        random,
-        theme,
-        torch,
-    )
+    return F, mcolors, mo, nn, np, plt, random, theme, torch
 
 
 @app.cell
